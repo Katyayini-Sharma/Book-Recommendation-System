@@ -36,13 +36,17 @@ h1, h2, h3 {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 20px;
+    gap: 30px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 .navbar a {
     color: #333333;
     font-weight: 500;
     text-decoration: none;
-    font-size: 15px;
+    font-size: 16px;
+    cursor: pointer;
 }
 .navbar a:hover {
     color: #8b4513;
@@ -96,20 +100,25 @@ footer {
 st.markdown("""
 <div class="navbar">
     <div class="logo">Literary Loft</div>
-    <a href="#top50">Home</a>
-    <a href="#shop">Shop</a>
-    <a href="#recommend">Recommend</a>
-    <a href="#blog">Blog</a>
-    <a href="#contact">Contact</a>
+    <a href="#home" id="nav_home">Home</a>
+    <a href="#recommend" id="nav_recommend">Recommend</a>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- Sidebar Navigation ---------------- #
-page = st.sidebar.radio("Navigate", ["Top 50 Books", "Recommendations"])
+# ---------------- Page Logic ---------------- #
+# Use session_state to track current page
+if 'page' not in st.session_state:
+    st.session_state.page = 'home'
 
-# ---------------- PAGE 1: Top 50 Books ---------------- #
-if page == "Top 50 Books":
-    st.markdown("<h1 id='top50'>Top 50 Book Recommendations</h1>", unsafe_allow_html=True)
+# Navbar click simulation
+if st.button("Home", key="home_btn"):
+    st.session_state.page = 'home'
+if st.button("Recommend", key="recommend_btn"):
+    st.session_state.page = 'recommend'
+
+# ---------------- Home / Top 50 Page ---------------- #
+if st.session_state.page == 'home':
+    st.markdown("<h1>Top 50 Book Recommendations</h1>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
 
     n_cols = 5
@@ -127,14 +136,14 @@ if page == "Top 50 Books":
                     st.markdown(f"<p>Rating: {round(book['avg_rating'],1)}</p>", unsafe_allow_html=True)
                     st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------- PAGE 2: Recommendations ---------------- #
-elif page == "Recommendations":
-    st.markdown("<h1 id='recommend'>Get Book Recommendations</h1>", unsafe_allow_html=True)
+# ---------------- Recommendations Page ---------------- #
+elif st.session_state.page == 'recommend':
+    st.markdown("<h1>Get Book Recommendations</h1>", unsafe_allow_html=True)
     st.markdown("<hr>", unsafe_allow_html=True)
 
     user_input = st.text_input("Enter a book you like:")
 
-    if st.button("Recommend"):
+    if st.button("Recommend Books"):
         if user_input not in pt.index:
             st.warning(f"Sorry, we couldn’t find the book “{user_input}”. Check spelling or try another.")
         else:
@@ -152,7 +161,7 @@ elif page == "Recommendations":
                     ])
 
             if data:
-                st.subheader("Recommended Books")
+                st.markdown("<h2>Recommended Books</h2>", unsafe_allow_html=True)
                 n_cols = 5
                 for i in range(0, len(data), n_cols):
                     cols = st.columns(n_cols)
