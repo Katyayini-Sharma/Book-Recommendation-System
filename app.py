@@ -1,41 +1,38 @@
-from flask import Flask, render_template, request
+import streamlit as st
 import pickle
 import numpy as np
 import pandas as pd
 
-app = Flask(__name__)
-
-# Load models and data
+# Load data
 popular_df = pickle.load(open('popular.pkl', 'rb'))
 pt = pickle.load(open('pt.pkl', 'rb'))
 similarity_score = pickle.load(open('similarity_score.pkl', 'rb'))
 books = pickle.load(open('books.pkl', 'rb'))
 
-@app.route('/')
-def index():
-    return render_template('index.html',
-                           book_name=list(popular_df['Book-Title'].values),
-                           author=list(popular_df['Book-Author'].values),
-                           image=list(popular_df['Image-URL-M'].values),
-                           votes=list(popular_df['num_ratings'].values),
-                           rating=list(popular_df['avg_rating'].values),
-                           )
+# Page setup
+st.set_page_config(page_title="Literary Loft", layout="wide")
+st.title("📚 Literary Loft - Book Recommender")
 
+# Show popular books
+st.subheader(" Top 10 Popular Books")
+cols = st.columns(5)
+for i, col in enumerate(cols * 2):  # top 10
+    if i < len(popular_df):
+        book = popular_df.iloc[i]
+        with col:
+            st.image(book['Image-URL-M'], width=120)
+            st.markdown(f"**{book['Book-Title']}**")
+            st.markdown(f"*by {book['Book-Author']}*")
+            st.markdown(f"⭐ {book['avg_rating']} | {book['num_ratings']} ratings")
 
-@app.route('/recommend')
-def recommend_ui():
-    return render_template('recommend.html')
+# Recommendations input
+st.subheader("Get Recommendations")
+user_input = st.text_input("Enter a book you like:")
 
-@app.route('/recommend_books', methods=['POST'])
-def recommend():
-    user_input = request.form.get('user_input')
-
-    try:
-        # Check if the book exists in the pivot table index
-        if user_input not in pt.index:
-            message = f"Sorry, we couldn’t find the book “{user_input}”. Please check the spelling or try another title."
-            return render_template('recommend.html', message=message)
-
+if st.button("Recommend"):
+    if user_input not in pt.index:
+        st.warning(f"Sorry, we couldn’t find the book “{user_input}”. Check spelling or try another.")
+    else:
         index = np.where(pt.index == user_input)[0][0]
         similar_items = sorted(list(enumerate(similarity_score[index])), key=lambda x: x[1], reverse=True)[1:11]
 
@@ -49,17 +46,14 @@ def recommend():
                     temp_df['Image-URL-M'].values[0]
                 ])
 
-        if not data:
-            message = f"Sorry, no similar books found for “{user_input}”. Try another one!"
-            return render_template('recommend.html', message=message)
-
-        return render_template('recommend.html', data=data)
-
-    except Exception as e:
-        print("Error:", e)
-        message = "Oops! Something went wrong while fetching recommendations. Please try again later."
-        return render_template('recommend.html', message=message)
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        if data:
+            st.subheader("Recommended Books")
+            cols = st.columns(5)
+            for i, col in enumerate(cols * 2):
+                if i < len(data):
+                    with col:
+                        st.image(data[i][2], width=120)
+                        st.markdown(f"**{data[i][0]}**")
+                        st.markdown(f"*by {data[i][1]}*")
+        else:
+            st.warning("No similar books found. Try another one!")
